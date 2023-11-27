@@ -3,7 +3,7 @@
 This project consists of one task that you will work on XV6. 
 Task B aims to help you understand the index structure and the support of large files on XV6.
 
-# Task B: Large Files (50 Points)
+# Task B: Large Files (5% of Final Grade)
 <code>Implement Large Files Support using doubly-indirect blocks on XV6</code>
 
 ## Overview - Large Files
