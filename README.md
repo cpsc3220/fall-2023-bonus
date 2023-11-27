@@ -1,113 +1,7 @@
-# CPSC/ECE 3220: Introduction to Operating System - Project #5
+# CPSC/ECE 3220: Introduction to Operating System - Bonus Project
 
-This project consists of two tasks that you will work on XV6. 
-Task A aims to help you understand how to increase parallelism on a multicore architecture. 
+This project consists of one task that you will work on XV6. 
 Task B aims to help you understand the index structure and the support of large files on XV6.
-
-# Task A: Per-Process Memory Allocator (50 Points)
-
-<code>Re-designing memory allocator code in XV6 to increase parallelism.</code>
-
-## Overview -- Locks and Memory Allocator
-A common symptom of poor parallelism on multi-core machines is high lock contention. 
-Improving parallelism often involves changing both data structures and locking strategies 
-in order to reduce contention. You'll do this for the xv6 memory allocator.
-
-Before writing code, you should make sure you have read 
-"Chapter 4: Locking" from the xv6 book and studied the corresponding code.
-
-The program user/kalloctest stresses xv6's memory allocator: 
-three processes grow and shrink their address spaces, resulting in many calls to kalloc and kfree. 
-kalloc and kfree obtain kmem.lock. 
-kalloctest prints the number of test-and-sets that did not succeed in 
-acquiring the kmem lock (and some other locks), which is a rough measure of contention:
-
-```
-    $ kalloctest
-    start test0
-    test0 results:
-    === lock kmem/bcache stats
-    lock: kmem: #test-and-set 161724 #acquire() 433008
-    lock: bcache: #test-and-set 0 #acquire() 812
-    === top 5 contended locks:
-    lock: kmem: #test-and-set 161724 #acquire() 433008
-    lock: proc: #test-and-set 290 #acquire() 961
-    lock: proc: #test-and-set 240 #acquire() 962
-    lock: proc: #test-and-set 72 #acquire() 907
-    lock: proc: #test-and-set 68 #acquire() 907
-    test0 FAIL
-    start test1
-    total allocated number of pages: 200000 (out of 32768)
-    test1 OK
-```
-
-`acquire` maintains, for each lock, the count of calls to `acquire` for that lock, 
-and the count of test-and-sets that didn't manage to acquire the lock. 
-kalloctest calls a system call that causes the kernel to print those counts 
-for the kmem and bcache locks and for the 5 most contended locks. 
-
-If there is lock contention the number of test-and-sets will be high 
-because it takes many loop iterations before acquire obtains the lock. 
-The system call returns the sum of the #test-and-sets for the kmem and bcache locks.
-
-For this task, you must use a dedicated unloaded machine with multiple cores. All the
-SoC lab machines will meet this requirement.
-
-The root cause of lock contention in kalloctest is that kalloc() has a 
-single free list, protected by a single lock. To remove lock contention, 
-you will have to redesign the memory allocator to avoid a single lock and list.
-The basic idea is to maintain a free list per CPU, each list with its own lock.
-Allocations and frees on different CPUs can run in parallel, b
-ecause each CPU will operate on a different list. 
-The main challenge will be to deal with the case in which one CPU's 
-free list is empty, but another CPU's list has free memory; in that case,
- the one CPU must "steal" part of the other CPU's free list. 
- Stealing may introduce lock contention, but that will hopefully be infrequent. 
-
-## Specification
-
-+ Your job is to implement per-CPU freelists and stealing when one CPU's list is empty. 
-+ Run kalloctest to see if your implementation has reduced lock contention,
- and to check that it can still allocate all of memory. 
-+ Your output will look similar to that shown below, although the specific numbers 
-will differ. 
-+ Make sure usertests still passes.
-
-```
-    $ kalloctest
-    start test0
-    test0 results:
-    === lock kmem/bcache stats
-    lock: kmem: #test-and-set 0 #acquire() 33167
-    lock: kmem: #test-and-set 0 #acquire() 200114
-    lock: kmem: #test-and-set 0 #acquire() 199752
-    lock: bcache: #test-and-set 0 #acquire() 28
-    === top 5 contended locks:
-    lock: proc: #test-and-set 22303 #acquire() 180082
-    lock: proc: #test-and-set 4162 #acquire() 180130
-    lock: proc: #test-and-set 4115 #acquire() 180129
-    lock: proc: #test-and-set 342 #acquire() 180070
-    lock: proc: #test-and-set 39 #acquire() 180070
-    test0 OK
-    start test1
-    total allocated number of pages: 200000 (out of 32768)
-    test1 OK
-    $
-    $ usertests
-    ...
-    ALL TESTS PASSED
-    $
-```
-
-## Hints
- + Please give all of your locks `initlock` names that start with "kmem".
- + You can use the constant `NCPU` from kernel/param.h
- + Let `freerange` give all free memory to the CPU running `freerange`.
- + The function `cpuid` returns the current core number, but it's only safe to 
- call it and use its result when interrupts are turned off. 
- + You should use push_off() and pop_off() to turn interrupts off and on.
- 
- You can run `./grade-kalloc` to see your potential grade for this task.
 
 # Task B: Large Files (50 Points)
 <code>Implement Large Files Support using doubly-indirect blocks on XV6</code>
@@ -214,8 +108,6 @@ Please following the procedure below in your submission.
 ```cd ~/path/to/your-projects-folder```
 2. Clean up the folders
     ```
-    cd TaskA
-    make clean
     cd ../TaskB
     make clean
     ```
